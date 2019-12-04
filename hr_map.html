@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+	<style type="text/css">
+	body, html,#container {width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
+                body, button, input, select, textarea {
+    font: 12px/16px Verdana, Helvetica, Arial, sans-serif;
+}
+	</style>
+<script>
+
+var map;
+var posmarker = null;
+var markersArray = [];
+var mapmarkerArray = [];
+function init() {
+  //设置地图中心点
+  var myLatlng = new qq.maps.LatLng(39.916527,116.397128);
+  //定义工厂模式函数
+  var myOptions = {
+    zoom: 13,               //设置地图缩放级别
+    zoomControl: false,
+    panControl: false,
+    mapTypeControl:false,
+    center: myLatlng,      //设置中心点样式
+    mapTypeId: qq.maps.MapTypeId.ROADMAP,  //设置地图样式详情参见MapType
+    mapStyleId:'style1'
+  }
+  //获取dom元素添加地图信息
+  map = new qq.maps.Map(document.getElementById("container"), myOptions);
+
+  //设置城市信息查询服务
+            var citylocation = new qq.maps.CityService({
+                //请求成功回调函数
+                complete: function(result) {
+                    map.setCenter(result.detail.latLng);
+                    //alert(result.detail.latLng);
+                },
+                error: function() {
+                    //alert("出错了，请输入正确的经纬度！！！");
+                }
+            });
+            citylocation.searchLocalCity();
+
+
+
+}
+
+function SetStreetMap()
+{
+   map.setMapTypeId(qq.maps.MapTypeId.ROADMAP);
+}
+
+function SetImageMap()
+{
+   map.setMapTypeId(qq.maps.MapTypeId.SATELLITE);
+}
+
+function SetHybridMap()
+{
+   map.setMapTypeId(qq.maps.MapTypeId.HYBRID);
+}
+
+function SetTrafficLayer()
+{
+    var layer = new qq.maps.TrafficLayer();
+    layer.setMap(map);
+}
+
+function PanTo(lng,lat){
+   map.panTo(new qq.maps.LatLng(lat,lng));
+}
+
+function ZoomTo(zoomlevel){
+   map.zoomTo(zoomlevel);
+}
+
+function ZoomToBounds(){
+  
+  var ne = null;
+  var sw = null;  
+  var bounds = null;
+  if (mapmarkerArray) {
+                 for (i in mapmarkerArray) {
+                        
+	        if(i ==0){
+                             if(mapmarkerArray[i] instanceof qq.maps.Circle)
+                                 ne = mapmarkerArray[i].getCenter();
+                             else
+                                 ne = mapmarkerArray[i].getPosition();
+	        }
+                        if(i ==1){
+                             if(mapmarkerArray[i] instanceof qq.maps.Circle)
+                                 sw = mapmarkerArray[i].getCenter();
+                             else
+                                 sw = mapmarkerArray[i].getPosition();
+                             bounds = new qq.maps.LatLngBounds(ne,sw);
+                         }
+                         if(i>1) {
+                             if(mapmarkerArray[i] instanceof qq.maps.Circle)
+                                 bounds.extend(mapmarkerArray[i].getCenter());
+                             else
+                                 bounds.extend(mapmarkerArray[i].getPosition());
+                        }
+                 }
+	map.fitBounds(bounds);
+            }
+}
+
+//清除定位marker
+function clearOverlays() {
+    if(posmarker != null){
+	posmarker.setMap(null);
+                posmarker = null;
+	}
+}
+
+//清除嫌疑人marker
+function clearSuspectmarkers(){
+    if (mapmarkerArray) {
+                 for (i in mapmarkerArray) {
+                        mapmarkerArray[i].setMap(null);
+                 }
+               mapmarkerArray = [];
+            }
+}
+
+//清除警察marker
+function clearTeammarkers(){
+    if (markersArray) {
+                 for (i in markersArray) {
+                        markersArray[i].setMap(null);
+                 }
+               markersArray = [];
+            }
+}
+
+function DrawPos(lng,lat) {
+            
+            clearOverlays();
+            posmarker = new qq.maps.Marker({
+                position: new qq.maps.LatLng(lat,lng),
+                map: map
+            });
+            posmarker.setVisible(true);
+            var anchor = new qq.maps.Point(16, 32),
+                size = new qq.maps.Size(32, 32),
+                origin = new qq.maps.Point(0, 0),
+                icon = new qq.maps.MarkerImage(
+                    "Images/定位.png",
+                    size,
+                    origin,
+                    anchor
+                );
+            posmarker.setIcon(icon);
+            map.panTo(new qq.maps.LatLng(lat,lng));
+        }
+
+function DrawPolyline(lng1,lat1,lng2,lat2){
+
+      var path = [
+            new qq.maps.LatLng(lat1, lng1),
+            new qq.maps.LatLng(lat2, lng2)
+        ];
+        var polyline = new qq.maps.Polyline({
+            map: map,
+            path: path,
+            strokeWeight: 4,
+            strokeDashStyle:"dash",
+            strokeColor: new qq.maps.Color(255, 255, 0, 1)
+        });
+        
+        markersArray.push(polyline);
+}
+
+function UpdateSuspect(s_name){
+        if (mapmarkerArray) {
+                 for (i in mapmarkerArray) {
+                             if(mapmarkerArray[i] instanceof qq.maps.Circle){
+                             }
+                             if(mapmarkerArray[i] instanceof qq.maps.Marker){
+                                    if(mapmarkerArray[i].getTitle() == s_name){
+                                          var anchor = new qq.maps.Point(16, 16),
+                                          size = new qq.maps.Size(32, 32),
+                                          origin = new qq.maps.Point(0, 0),
+                                          icon = new qq.maps.MarkerImage(
+                                                    "Images/到案.png",
+                                                     size,
+                                                     origin,
+                                                     anchor
+                                                     );
+                                          mapmarkerArray[i].setIcon(icon);
+                                    }
+                             }
+                             if(mapmarkerArray[i] instanceof qq.maps.Label){
+                                    if(mapmarkerArray[i].getContent() == s_name){
+                                          var cssP = {border:"0px",fontWeight: "bold",color:"#dbdbdb",backgroundColor:"#04B00F",fontSize:"20px"}
+                                          mapmarkerArray[i].setStyle(cssP);
+                                    }
+                             }
+                        
+                 }
+            }
+}
+
+function DrawSuspect(s_name,lng,lat) {
+            var marker = new qq.maps.Marker({
+                position: new qq.maps.LatLng(lat,lng),
+                zIndex:10,
+                map: map
+            });
+            
+           //var aaaa = MapCanvasProjection();
+            
+            marker.setVisible(true);
+            marker.setAnimation(qq.maps.MarkerAnimation.DOWN);
+            //设置Marker是否可以被拖拽，为true时可拖拽，false时不可拖拽，默认属性为false
+            marker.setDraggable(false);
+            ////设置Marker自定义图标的属性，size是图标尺寸，该尺寸为显示图标的实际尺寸，origin是切图坐标，该坐标是相对于图片左上角默认为（0,0）的相对像素坐标，anchor是锚点坐标，描述经纬度点对应图标中的位置
+            var anchor = new qq.maps.Point(16, 16),
+                size = new qq.maps.Size(32, 32),
+                origin = new qq.maps.Point(0, 0),
+                icon = new qq.maps.MarkerImage(
+                    "Images/目标.png",
+                    size,
+                    origin,
+                    anchor
+                );
+            marker.setIcon(icon);
+            marker.setTitle(s_name);
+            
+            
+            //标记Marker点击事件
+            qq.maps.event.addListener(marker, 'click', function() {
+                var y = map.getBounds().getNorthEast().getLat();
+                var x = map.getBounds().getNorthEast().getLng();
+                var y1 = map.getBounds().getSouthWest().getLat();
+                var x1 = map.getBounds().getSouthWest().getLng();
+                window.external.MyMessageBox(x,y,x1,y1,marker.getPosition().getLng(),marker.getPosition().getLat(),s_name);
+            });
+
+             var label = new qq.maps.Label({
+                position: new qq.maps.LatLng(lat,lng),
+                map: map,
+                content: s_name,
+                offset: new qq.maps.Size(-9, -10),
+                zIndex:100,
+              style:{border:"0px",fontWeight: "bold",color:"#dbdbdb",backgroundColor:"#d81e06",fontSize:"20px"}
+            });
+            
+            qq.maps.event.addListener(label, 'click', function() {
+                var y = map.getBounds().getNorthEast().getLat();
+                var x = map.getBounds().getNorthEast().getLng();
+                var y1 = map.getBounds().getSouthWest().getLat();
+                var x1 = map.getBounds().getSouthWest().getLng();
+                window.external.MyMessageBox(x,y,x1,y1,marker.getPosition().getLng(),marker.getPosition().getLat(),s_name);
+            });
+            
+            mapmarkerArray.push(marker);
+            mapmarkerArray.push(label);
+        }
+
+function DrawPolice(s_name,lng,lat,status) {
+            var marker = new qq.maps.Marker({
+                position: new qq.maps.LatLng(lat,lng),
+                map: map
+            });
+            
+            ////设置Marker自定义图标的属性，size是图标尺寸，该尺寸为显示图标的实际尺寸，origin是切图坐标，该坐标是相对于图片左上角默认为（0,0）的相对像素坐标，anchor是锚点坐标，描述经纬度点对应图标中的位置
+            var anchor = new qq.maps.Point(16, 16),
+                size = new qq.maps.Size(32, 32),
+                origin = new qq.maps.Point(0, 0),
+                icon = new qq.maps.MarkerImage(
+                    "Images/警察.png",
+                    size,
+                    origin,
+                    anchor
+                );
+                if(status == 0){
+                  icon = new qq.maps.MarkerImage(
+                    "Images/警察离线.png",
+                    size,
+                    origin,
+                    anchor
+                  );
+                }
+            marker.setIcon(icon);
+            marker.setTitle(s_name);
+            //标记Marker点击事件
+            qq.maps.event.addListener(marker, 'click', function() {
+                var y = map.getBounds().getNorthEast().getLat();
+                var x = map.getBounds().getNorthEast().getLng();
+                var y1 = map.getBounds().getSouthWest().getLat();
+                var x1 = map.getBounds().getSouthWest().getLng();
+                window.external.MyMessageBox2(x,y,x1,y1,marker.getPosition().getLng(),marker.getPosition().getLat(),s_name);
+            });
+
+            var cssP;
+           if(status == 0){
+                cssP = {fontWeight: "bold",color:"#dbdbdb",backgroundColor:"#3F3F46",fontSize:"15px"};
+            }
+            else{
+                cssP = {fontWeight: "bold",color:"#dbdbdb",backgroundColor:"#1296db",fontSize:"15px"};
+             }
+            var label = new qq.maps.Label({
+                position: new qq.maps.LatLng(lat,lng),
+                map: map,
+                content: s_name,
+                offset: new qq.maps.Size(-46, 14),
+              style:cssP
+            });
+            
+                    
+      
+            qq.maps.event.addListener(label, 'click', function() {
+                var y = map.getBounds().getNorthEast().getLat();
+                var x = map.getBounds().getNorthEast().getLng();
+                var y1 = map.getBounds().getSouthWest().getLat();
+                var x1 = map.getBounds().getSouthWest().getLng();
+                window.external.MyMessageBox2(x,y,x1,y1,marker.getPosition().getLng(),marker.getPosition().getLat(),s_name);
+            });
+           
+            markersArray.push(marker);
+            markersArray.push(label);
+}
+function DrawSuspectCircle1(lng,lat,r_one) {
+            var center = new qq.maps.LatLng(lat, lng);
+            var circle = new qq.maps.Circle({
+                map: map,
+                center: center,
+                radius: r_one,
+                fillColor: new qq.maps.Color(255,0,0,0.05),
+                strokeColor:new qq.maps.Color(216,30,6),
+                strokeWeight: 3,
+                strokeDashStyle:'solid'
+            });
+            mapmarkerArray.push(circle);
+        }
+function DrawSuspectCircle2(lng,lat,r_two) {
+            var center = new qq.maps.LatLng(lat, lng);
+            var circle = new qq.maps.Circle({
+                map: map,
+                center: center,
+                radius: r_two,
+                fillColor: new qq.maps.Color(255,255,0,0.05),
+                strokeColor:new qq.maps.Color(255,255,0),
+                strokeWeight: 3,
+                strokeDashStyle:'dash'
+            });
+            mapmarkerArray.push(circle);
+        }
+
+
+  //异步加载地图库函数文件
+function loadScript() {
+  //创建script标签
+  var script = document.createElement("script");
+  //设置标签的type属性
+  script.type = "text/javascript";
+  //设置标签的链接地址
+  script.src = "https://map.qq.com/api/js?v=2.exp&key=4RTBZ-CDULO-5XQWS-SEGV2-RCOTT-2RB75&callback=init";
+  //添加标签到dom
+  document.body.appendChild(script);
+}
+  
+window.onload = loadScript;    // dom文档加载结束开始加载 此段代码
+</script>
+</head>
+<body>
+<div id="container"></div>
+</body>
+</html>
